@@ -93,7 +93,7 @@ func main() {
 
 	// CORS Setup
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "https://langley-gamma.vercel.app/"},
+		AllowOrigins:     []string{"http://localhost:5173", "https://langley-gamma.vercel.app"},
 		AllowMethods:     []string{"POST", "GET", "OPTIONS"},
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
