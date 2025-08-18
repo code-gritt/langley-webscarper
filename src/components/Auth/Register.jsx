@@ -15,8 +15,22 @@ const Register = () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
+
     if (response.ok) {
-      navigate("/login");
+      // ✅ after register, try to login automatically
+      const loginRes = await fetch("http://localhost:8080/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (loginRes.ok) {
+        const data = await loginRes.json();
+        localStorage.setItem("token", data.token); // save JWT
+        navigate("/dashboard"); // redirect user
+      } else {
+        navigate("/login"); // fallback
+      }
     } else {
       const data = await response.json();
       setError(data.error || "Registration failed");
