@@ -1,39 +1,29 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import styles from "../../style"; // reuse your global styles (fonts, colors, spacing)
+import useAuthStore from "../../store/authStore";
+import styles from "../../style";
 
 const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const setUser = useAuthStore((state) => state.setUser);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const response = await fetch(
       "https://langley-webscarper.onrender.com/api/register",
       {
+        // Use your deployed backend URL
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       }
     );
-
     if (response.ok) {
-      // ✅ after register, try to login automatically
-      const loginRes = await fetch("http://localhost:8080/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (loginRes.ok) {
-        const data = await loginRes.json();
-        localStorage.setItem("token", data.token); // save JWT
-        navigate("/dashboard"); // redirect user
-      } else {
-        navigate("/login"); // fallback
-      }
+      // Assuming register doesn't return token, redirect to login
+      navigate("/login");
     } else {
       const data = await response.json();
       setError(data.error || "Registration failed");

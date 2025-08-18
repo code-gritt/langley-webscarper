@@ -1,27 +1,30 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import styles from "../../style"; // reusing your global styles
+import useAuthStore from "../../store/authStore";
+import styles from "../../style";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const setUser = useAuthStore((state) => state.setUser);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const response = await fetch(
       "https://langley-webscarper.onrender.com/api/login",
       {
+        // Use your deployed backend URL
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       }
     );
-
     if (response.ok) {
       const data = await response.json();
-      localStorage.setItem("token", data.token); // ✅ save token
+      localStorage.setItem("token", data.token);
+      setUser({ email }); // Set user in store
       navigate("/dashboard");
     } else {
       const data = await response.json();

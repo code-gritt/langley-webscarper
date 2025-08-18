@@ -3,6 +3,7 @@ import Register from "./components/Auth/Register";
 import Login from "./components/Auth/Login";
 import Landing from "./pages/Landing";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
+import { Navbar } from "./components";
 
 function App() {
   return (
@@ -15,7 +16,10 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <div>Dashboard (TBD)</div>
+              <div>
+                <Navbar />
+                Dashboard (TBD)
+              </div>
             </ProtectedRoute>
           }
         />
