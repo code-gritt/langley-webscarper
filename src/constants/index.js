@@ -1,4 +1,19 @@
-import { people01, people02, people03, facebook, instagram, linkedin, twitter, airbnb, binance, coinbase, dropbox, send, shield, star  } from "../assets";
+import {
+  people01,
+  people02,
+  people03,
+  facebook,
+  instagram,
+  linkedin,
+  twitter,
+  airbnb,
+  binance,
+  coinbase,
+  dropbox,
+  send,
+  shield,
+  star,
+} from "../assets";
 
 export const navLinks = [
   {
@@ -11,7 +26,7 @@ export const navLinks = [
   },
   {
     id: "product",
-    title: "Product",
+    title: "Platform",
   },
   {
     id: "clients",
@@ -23,23 +38,23 @@ export const features = [
   {
     id: "feature-1",
     icon: star,
-    title: "Rewards",
+    title: "Smart Workflows",
     content:
-      "The best credit cards offer some tantalizing combinations of promotions and prizes",
+      "Easily define scraping rules and automate tasks with our visual setup tools.",
   },
   {
     id: "feature-2",
     icon: shield,
-    title: "100% Secured",
+    title: "Secure & Reliable",
     content:
-      "We take proactive steps make sure your information and transactions are secure.",
+      "Your data and jobs are protected with best practices for security and compliance.",
   },
   {
     id: "feature-3",
     icon: send,
-    title: "Balance Transfer",
+    title: "Fast Exports",
     content:
-      "A balance transfer credit card can save you a lot of money in interest charges.",
+      "Download your results instantly in CSV or JSON, or connect via API for automation.",
   },
 ];
 
@@ -47,25 +62,25 @@ export const feedback = [
   {
     id: "feedback-1",
     content:
-      "Money is only a tool. It will take you wherever you wish, but it will not replace you as the driver.",
+      "Langley made scraping simple. I set up a daily job for product prices in minutes, no coding needed.",
     name: "Herman Jensen",
-    title: "Founder & Leader",
+    title: "E-commerce Analyst",
     img: people01,
   },
   {
     id: "feedback-2",
     content:
-      "Money makes your life easier. If you're lucky to have it, you're lucky.",
+      "The credit system is perfect. I only pay for what I use and can scale up whenever my projects grow.",
     name: "Steve Mark",
-    title: "Founder & Leader",
+    title: "Startup Founder",
     img: people02,
   },
   {
     id: "feedback-3",
     content:
-      "It is usually people in the money business, finance, and international trade that are really rich.",
+      "Scheduling scrapes saved my team hours of manual work. The results export cleanly every time.",
     name: "Kenn Gallagher",
-    title: "Founder & Leader",
+    title: "Research Manager",
     img: people03,
   },
 ];
@@ -73,18 +88,18 @@ export const feedback = [
 export const stats = [
   {
     id: "stats-1",
-    title: "User Active",
-    value: "3800+",
+    title: "Active Users",
+    value: "3,800+",
   },
   {
     id: "stats-2",
-    title: "Trusted by Company",
+    title: "Trusted by Teams",
     value: "230+",
   },
   {
     id: "stats-3",
-    title: "Transaction",
-    value: "$230M+",
+    title: "Jobs Run",
+    value: "1M+",
   },
 ];
 
@@ -93,24 +108,24 @@ export const footerLinks = [
     title: "Useful Links",
     links: [
       {
-        name: "Content",
-        link: "https://www.hoobank.com/content/",
+        name: "Overview",
+        link: "https://www.Langley.com/overview/",
       },
       {
         name: "How it Works",
-        link: "https://www.hoobank.com/how-it-works/",
+        link: "https://www.Langley.com/how-it-works/",
       },
       {
-        name: "Create",
-        link: "https://www.hoobank.com/create/",
+        name: "Create Job",
+        link: "https://www.Langley.com/create/",
       },
       {
-        name: "Explore",
-        link: "https://www.hoobank.com/explore/",
+        name: "Explore Use Cases",
+        link: "https://www.Langley.com/explore/",
       },
       {
         name: "Terms & Services",
-        link: "https://www.hoobank.com/terms-and-services/",
+        link: "https://www.Langley.com/terms-and-services/",
       },
     ],
   },
@@ -119,23 +134,23 @@ export const footerLinks = [
     links: [
       {
         name: "Help Center",
-        link: "https://www.hoobank.com/help-center/",
+        link: "https://www.Langley.com/help-center/",
       },
       {
         name: "Partners",
-        link: "https://www.hoobank.com/partners/",
+        link: "https://www.Langley.com/partners/",
       },
       {
         name: "Suggestions",
-        link: "https://www.hoobank.com/suggestions/",
+        link: "https://www.Langley.com/suggestions/",
       },
       {
         name: "Blog",
-        link: "https://www.hoobank.com/blog/",
+        link: "https://www.Langley.com/blog/",
       },
       {
         name: "Newsletters",
-        link: "https://www.hoobank.com/newsletters/",
+        link: "https://www.Langley.com/newsletters/",
       },
     ],
   },
@@ -143,12 +158,12 @@ export const footerLinks = [
     title: "Partner",
     links: [
       {
-        name: "Our Partner",
-        link: "https://www.hoobank.com/our-partner/",
+        name: "Our Partners",
+        link: "https://www.Langley.com/our-partners/",
       },
       {
         name: "Become a Partner",
-        link: "https://www.hoobank.com/become-a-partner/",
+        link: "https://www.Langley.com/become-a-partner/",
       },
     ],
   },
