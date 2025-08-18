@@ -98,6 +98,7 @@ func main() {
 			"http://localhost:5173",                 // Vite dev
 			"http://localhost:3000",                 // CRA dev
 			"https://langley-webscarper.vercel.app", // Deployed frontend
+			"https://langley-webscarper.onrender.com",
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
