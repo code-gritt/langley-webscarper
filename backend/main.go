@@ -95,9 +95,9 @@ func main() {
 	// CORS Setup
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
-			"http://localhost:5173",                 // for Vite dev
-			"http://localhost:3000",                 // if you run CRA
-			"https://langley-webscarper.vercel.app", // your deployed frontend
+			"http://localhost:5173",                 // Vite dev
+			"http://localhost:3000",                 // CRA dev
+			"https://langley-webscarper.vercel.app", // Deployed frontend
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
@@ -110,5 +110,10 @@ func main() {
 	r.POST("/api/register", register)
 	r.POST("/api/login", login)
 
-	r.Run(":8080")
+	// ✅ Use Render's dynamic PORT
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	r.Run(":" + port)
 }
