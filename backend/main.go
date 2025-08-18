@@ -93,10 +93,16 @@ func main() {
 
 	// CORS Setup
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "https://langley-webscarper.vercel.app", "http://localhost:8080"},
-		AllowMethods:     []string{"POST", "GET", "OPTIONS"},
-		AllowHeaders:     []string{"Content-Type", "Authorization"},
+		AllowOrigins: []string{
+			"http://localhost:5173",                 // for Vite dev
+			"http://localhost:3000",                 // if you run CRA
+			"https://langley-webscarper.vercel.app", // your deployed frontend
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
 	}))
 
 	// Routes
