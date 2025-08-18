@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"os"
 	"time"
 	"webscraper-backend/models"
 
@@ -18,7 +19,7 @@ var jwtKey = []byte("g8Vx1xX7oBLad0fBAA4yowjE1_rBp3HB2paKvVy4sa4=")
 
 // DB Setup
 func initDB() {
-	dsn := "postgresql://neondb_owner:npg_SPONiwa19xzc@ep-noisy-bonus-abn6jdrx-pooler.eu-west-2.aws.neon.tech/langley-database?sslmode=require&channel_binding=require"
+	dsn := os.Getenv("DATABASE_URL")
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect to database: " + err.Error())
