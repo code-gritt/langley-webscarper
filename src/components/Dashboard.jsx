@@ -39,7 +39,38 @@ const Dashboard = () => {
   }, []);
 
   const handleExecute = async (id) => {
-    // ... (existing execute logic)
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setError("No token found. Please log in again.");
+      return;
+    }
+    try {
+      const response = await fetch(
+        `https://langley-webscarper.onrender.com/api/jobs/${id}/execute`,
+        {
+          method: "GET", // Match the backend route method
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        // Update the job state with the new result and status
+        setJobs(
+          jobs.map((job) =>
+            job.ID === id
+              ? { ...job, Status: "completed", Result: data.results }
+              : job
+          )
+        );
+      } else {
+        setError(data.error || "Job execution failed");
+      }
+    } catch (error) {
+      setError("Network error. Please try again.");
+      console.log("Execute Error:", error);
+    }
   };
 
   const handleExport = async (id) => {
