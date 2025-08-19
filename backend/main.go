@@ -164,7 +164,7 @@ func executeJob(c *gin.Context) {
 		return
 	}
 
-	// Fetch the page
+	// Fetch the webpage
 	resp, err := http.Get(job.URL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch URL"})
@@ -172,7 +172,7 @@ func executeJob(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
-	// Parse with goquery
+	// Parse HTML with goquery
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse HTML"})
@@ -184,9 +184,13 @@ func executeJob(c *gin.Context) {
 		results = append(results, s.Text())
 	})
 
+	// Store results as JSON and update status
 	job.Result = fmt.Sprintf(`{"data": %q}`, results)
 	job.Status = "completed"
-	DB.Save(&job)
+	if err := DB.Save(&job).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save results"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Job executed", "results": results})
 }
@@ -220,6 +224,7 @@ func main() {
 	api.Use(authMiddleware())
 	api.POST("/jobs", createJob)
 	api.POST("/jobs/:id/execute", executeJob)
+	api.GET("/jobs/:id/execute", executeJob) // ✅ Added GET route
 
 	// Render dynamic port
 	port := os.Getenv("PORT")

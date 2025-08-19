@@ -5,6 +5,7 @@ import Landing from "./pages/Landing";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import { Navbar } from "./components";
 import JobCreate from "./components/JobCreate";
+import Dashboard from "./components/Dashboard";
 
 function App() {
   return (
@@ -27,7 +28,7 @@ function App() {
             <ProtectedRoute>
               <div>
                 <Navbar />
-                Dashboard (TBD)
+                <Dashboard />
               </div>
             </ProtectedRoute>
           }
