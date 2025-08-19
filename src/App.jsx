@@ -4,6 +4,7 @@ import Login from "./components/Auth/Login";
 import Landing from "./pages/Landing";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import { Navbar } from "./components";
+import JobCreate from "./components/JobCreate";
 
 function App() {
   return (
@@ -12,6 +13,14 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route
+          path="/create-job"
+          element={
+            <ProtectedRoute>
+              <JobCreate />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/dashboard"
           element={

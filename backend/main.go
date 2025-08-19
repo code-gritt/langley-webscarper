@@ -1,11 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"time"
 	"webscraper-backend/models"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -17,7 +19,7 @@ import (
 var DB *gorm.DB
 var jwtKey = []byte("g8Vx1xX7oBLad0fBAA4yowjE1_rBp3HB2paKvVy4sa4=")
 
-// DB Setup
+// ---------------------- Database Setup ----------------------
 func initDB() {
 	dsn := os.Getenv("DATABASE_URL")
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -25,10 +27,38 @@ func initDB() {
 		panic("failed to connect to database: " + err.Error())
 	}
 	DB = db
-	DB.AutoMigrate(&models.User{})
+	DB.AutoMigrate(&models.User{}, &models.Job{})
 }
 
-// Register Handler
+// ---------------------- Auth Middleware ----------------------
+func authMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString := c.GetHeader("Authorization")
+		if tokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "No token provided"})
+			c.Abort()
+			return
+		}
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			return jwtKey, nil
+		})
+		if err != nil || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
+		}
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			c.Abort()
+			return
+		}
+		c.Set("email", claims["email"])
+		c.Next()
+	}
+}
+
+// ---------------------- Auth Handlers ----------------------
 func register(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -51,7 +81,6 @@ func register(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "User registered"})
 }
 
-// Login Handler
 func login(c *gin.Context) {
 	var input struct {
 		Email    string `json:"email"`
@@ -76,7 +105,7 @@ func login(c *gin.Context) {
 	// Generate JWT
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": user.Email,
-		"exp":   time.Now().Add(24 * time.Hour).Unix(), // expires in 24h
+		"exp":   time.Now().Add(24 * time.Hour).Unix(),
 	})
 
 	tokenString, err := token.SignedString(jwtKey)
@@ -88,16 +117,83 @@ func login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"token": tokenString})
 }
 
+// ---------------------- Job Handlers ----------------------
+func createJob(c *gin.Context) {
+	var input struct {
+		URL      string `json:"url" binding:"required"`
+		Selector string `json:"selector" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	email, _ := c.Get("email")
+	var user models.User
+	if err := DB.Where("email = ?", email).First(&user).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+
+	job := models.Job{
+		UserID:   user.ID,
+		URL:      input.URL,
+		Selector: input.Selector,
+	}
+	if err := DB.Create(&job).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create job"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Job created", "jobId": job.ID})
+}
+
+func executeJob(c *gin.Context) {
+	jobID := c.Param("id")
+	var job models.Job
+	if err := DB.First(&job, jobID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
+		return
+	}
+
+	// Fetch the page
+	resp, err := http.Get(job.URL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch URL"})
+		return
+	}
+	defer resp.Body.Close()
+
+	// Parse with goquery
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse HTML"})
+		return
+	}
+
+	var results []string
+	doc.Find(job.Selector).Each(func(i int, s *goquery.Selection) {
+		results = append(results, s.Text())
+	})
+
+	job.Result = fmt.Sprintf(`{"data": %q}`, results)
+	job.Status = "completed"
+	DB.Save(&job)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Job executed", "results": results})
+}
+
+// ---------------------- Main ----------------------
 func main() {
 	initDB()
 	r := gin.Default()
 
-	// CORS Setup
+	// CORS
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
-			"http://localhost:5173",                 // Vite dev
-			"http://localhost:3000",                 // CRA dev
-			"https://langley-webscarper.vercel.app", // Deployed frontend
+			"http://localhost:5173",
+			"http://localhost:3000",
+			"https://langley-webscarper.vercel.app",
 			"https://langley-webscarper.onrender.com",
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -107,11 +203,17 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Routes
+	// Public routes
 	r.POST("/api/register", register)
 	r.POST("/api/login", login)
 
-	// ✅ Use Render's dynamic PORT
+	// Protected routes
+	api := r.Group("/api")
+	api.Use(authMiddleware())
+	api.POST("/jobs", createJob)
+	api.POST("/jobs/:id/execute", executeJob)
+
+	// Render dynamic port
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
