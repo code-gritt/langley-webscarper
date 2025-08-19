@@ -40,7 +40,6 @@ func authMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// ✅ Strip "Bearer " if present
 		if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
 			tokenString = tokenString[7:]
 		}
@@ -74,11 +73,7 @@ func register(c *gin.Context) {
 		return
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
-		return
-	}
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	user.Password = string(hashedPassword)
 
 	if err := DB.Create(&user).Error; err != nil {
@@ -105,23 +100,17 @@ func login(c *gin.Context) {
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
+	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)) != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
 		return
 	}
 
-	// Generate JWT
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": user.Email,
 		"exp":   time.Now().Add(24 * time.Hour).Unix(),
 	})
 
-	tokenString, err := token.SignedString(jwtKey)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create token"})
-		return
-	}
-
+	tokenString, _ := token.SignedString(jwtKey)
 	c.JSON(http.StatusOK, gin.H{"token": tokenString})
 }
 
@@ -147,13 +136,32 @@ func createJob(c *gin.Context) {
 		UserID:   user.ID,
 		URL:      input.URL,
 		Selector: input.Selector,
+		Status:   "pending",
 	}
+
 	if err := DB.Create(&job).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create job"})
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Job created", "jobId": job.ID})
+}
+
+func getJobs(c *gin.Context) {
+	email, _ := c.Get("email")
+	var user models.User
+	if err := DB.Where("email = ?", email).First(&user).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+
+	var jobs []models.Job
+	if err := DB.Where("user_id = ?", user.ID).Find(&jobs).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch jobs"})
+		return
+	}
+
+	c.JSON(http.StatusOK, jobs)
 }
 
 func executeJob(c *gin.Context) {
@@ -164,7 +172,6 @@ func executeJob(c *gin.Context) {
 		return
 	}
 
-	// Fetch the webpage
 	resp, err := http.Get(job.URL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch URL"})
@@ -172,7 +179,6 @@ func executeJob(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
-	// Parse HTML with goquery
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse HTML"})
@@ -184,13 +190,9 @@ func executeJob(c *gin.Context) {
 		results = append(results, s.Text())
 	})
 
-	// Store results as JSON and update status
-	job.Result = fmt.Sprintf(`{"data": %q}`, results)
+	job.Result = fmt.Sprintf("%v", results)
 	job.Status = "completed"
-	if err := DB.Save(&job).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save results"})
-		return
-	}
+	DB.Save(&job)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Job executed", "results": results})
 }
@@ -200,33 +202,30 @@ func main() {
 	initDB()
 	r := gin.Default()
 
-	// CORS
+	// CORS setup
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://localhost:5173",
-			"http://localhost:3000",
-			"https://langley-webscarper.vercel.app",
-			"https://langley-webscarper.onrender.com",
-		},
+		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000", "https://langley-webscarper.vercel.app"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Public routes
+	// Public
 	r.POST("/api/register", register)
 	r.POST("/api/login", login)
 
-	// Protected routes
+	// Protected
 	api := r.Group("/api")
 	api.Use(authMiddleware())
-	api.POST("/jobs", createJob)
-	api.POST("/jobs/:id/execute", executeJob)
-	api.GET("/jobs/:id/execute", executeJob) // ✅ Added GET route
+	{
+		api.POST("/jobs", createJob)
+		api.GET("/jobs", getJobs) // ✅ fetch jobs
+		api.POST("/jobs/:id/execute", executeJob)
+		api.GET("/jobs/:id/execute", executeJob)
+	}
 
-	// Render dynamic port
+	// Run
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
