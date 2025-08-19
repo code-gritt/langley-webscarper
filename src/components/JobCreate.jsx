@@ -11,7 +11,6 @@ const JobCreate = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
-    console.log("Token:", token);
     if (!token) {
       setError("No token found. Please log in again.");
       return;
@@ -20,6 +19,7 @@ const JobCreate = () => {
       setError("URL and Selector are required.");
       return;
     }
+
     try {
       const response = await fetch(
         "https://langley-webscarper.onrender.com/api/jobs",
@@ -32,25 +32,25 @@ const JobCreate = () => {
           body: JSON.stringify({ url, selector }),
         }
       );
+
       const data = await response.json();
       if (response.ok) {
-        navigate(`/dashboard?jobId=${data.jobId}`); // Navigate to dashboard with jobId
+        // ✅ Redirect to Dashboard with jobId (so it shows up there)
+        navigate(`/dashboard?jobId=${data.jobId}`);
       } else {
         setError(data.error || "Job creation failed");
-        console.log("Error Response:", data);
       }
     } catch (error) {
       setError("Network error. Please try again.");
-      console.log("Fetch Error:", error);
     }
   };
 
   return (
     <section className={`${styles.flexCenter} bg-primary min-h-screen`}>
-      <div className="bg-black-gradient-2 p-8 sm:p-12 rounded-[20px] shadow-lg w-full max-w-md">
+      <div className="bg-black-gradient-2 p-8 sm:p-12 rounded-[20px] shadow-lg w-full max-w-2xl">
         <h2 className={`${styles.heading2} text-center`}>Create a Job</h2>
         <p className={`${styles.paragraph} text-center mb-6`}>
-          Enter a target website and a CSS selector to scrape.
+          Enter the target website URL and the CSS selector you want to scrape.
         </p>
 
         {error && (
@@ -70,7 +70,7 @@ const JobCreate = () => {
             type="text"
             value={selector}
             onChange={(e) => setSelector(e.target.value)}
-            placeholder="Enter CSS Selector (e.g., h1, .title)"
+            placeholder="Enter CSS Selector (e.g., h1, .title, #main)"
             className="p-3 rounded-lg bg-dimBlue text-white font-poppins outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
@@ -84,7 +84,7 @@ const JobCreate = () => {
         </form>
 
         <p className="text-dimWhite text-sm text-center mt-6">
-          Want to see your jobs?{" "}
+          Want to check your jobs?{" "}
           <span
             className="text-blue-400 cursor-pointer hover:underline"
             onClick={() => navigate("/dashboard")}

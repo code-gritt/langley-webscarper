@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -11,6 +13,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/robfig/cron/v3"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -119,6 +122,7 @@ func createJob(c *gin.Context) {
 	var input struct {
 		URL      string `json:"url" binding:"required"`
 		Selector string `json:"selector" binding:"required"`
+		Schedule string `json:"schedule,omitempty"` // optional cron expr
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
@@ -136,6 +140,7 @@ func createJob(c *gin.Context) {
 		UserID:   user.ID,
 		URL:      input.URL,
 		Selector: input.Selector,
+		Schedule: input.Schedule,
 		Status:   "pending",
 	}
 
@@ -166,23 +171,31 @@ func getJobs(c *gin.Context) {
 
 func executeJob(c *gin.Context) {
 	jobID := c.Param("id")
+	if err := runJob(jobID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var job models.Job
+	DB.First(&job, jobID)
+	c.JSON(http.StatusOK, gin.H{"message": "Job executed", "results": job.Result})
+}
+
+func runJob(jobID string) error {
 	var job models.Job
 	if err := DB.First(&job, jobID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
-		return
+		return fmt.Errorf("Job not found")
 	}
 
 	resp, err := http.Get(job.URL)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch URL"})
-		return
+		return fmt.Errorf("Failed to fetch URL")
 	}
 	defer resp.Body.Close()
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse HTML"})
-		return
+		return fmt.Errorf("Failed to parse HTML")
 	}
 
 	var results []string
@@ -190,11 +203,60 @@ func executeJob(c *gin.Context) {
 		results = append(results, s.Text())
 	})
 
-	job.Result = fmt.Sprintf("%v", results)
+	resultJSON, _ := json.Marshal(results)
+	job.Result = string(resultJSON)
 	job.Status = "completed"
 	DB.Save(&job)
 
-	c.JSON(http.StatusOK, gin.H{"message": "Job executed", "results": results})
+	return nil
+}
+
+// ---------------------- Export Job ----------------------
+func exportJob(c *gin.Context) {
+	jobID := c.Param("id")
+	var job models.Job
+	if err := DB.First(&job, jobID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
+		return
+	}
+
+	var data []string
+	if err := json.Unmarshal([]byte(job.Result), &data); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse results"})
+		return
+	}
+
+	file, err := os.CreateTemp("", "job_export_*.csv")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create export file"})
+		return
+	}
+	defer os.Remove(file.Name())
+
+	writer := csv.NewWriter(file)
+	writer.Write([]string{"Data"})
+	for _, item := range data {
+		writer.Write([]string{item})
+	}
+	writer.Flush()
+
+	c.Header("Content-Disposition", "attachment; filename=job_export.csv")
+	c.Header("Content-Type", "text/csv")
+	c.File(file.Name())
+}
+
+// ---------------------- Scheduler ----------------------
+func startScheduler() {
+	c := cron.New()
+	// run every minute, check for jobs with schedule set
+	c.AddFunc("@every 1m", func() {
+		var jobs []models.Job
+		DB.Where("schedule != '' AND status = 'pending'").Find(&jobs)
+		for _, job := range jobs {
+			go runJob(fmt.Sprintf("%d", job.ID))
+		}
+	})
+	c.Start()
 }
 
 // ---------------------- Main ----------------------
@@ -202,7 +264,7 @@ func main() {
 	initDB()
 	r := gin.Default()
 
-	// CORS setup
+	// CORS
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000", "https://langley-webscarper.vercel.app"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -220,12 +282,14 @@ func main() {
 	api.Use(authMiddleware())
 	{
 		api.POST("/jobs", createJob)
-		api.GET("/jobs", getJobs) // ✅ fetch jobs
+		api.GET("/jobs", getJobs)
 		api.POST("/jobs/:id/execute", executeJob)
 		api.GET("/jobs/:id/execute", executeJob)
+		api.GET("/jobs/:id/export", exportJob)
 	}
 
-	// Run
+	go startScheduler()
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

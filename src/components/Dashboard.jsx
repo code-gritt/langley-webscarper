@@ -25,9 +25,9 @@ const Dashboard = () => {
             },
           }
         );
-        const data = await response.json();
+        const data = await response.json(); // Adjust based on your API
         if (response.ok) {
-          setJobs(data); // Adjust based on your API response format
+          setJobs(data); // Assuming API returns job list
         } else {
           setError(data.error || "Failed to fetch jobs");
         }
@@ -39,31 +39,28 @@ const Dashboard = () => {
   }, []);
 
   const handleExecute = async (id) => {
+    // ... (existing execute logic)
+  };
+
+  const handleExport = async (id) => {
     const token = localStorage.getItem("token");
-    try {
-      const response = await fetch(
-        `https://langley-webscarper.onrender.com/api/jobs/${id}/execute`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const data = await response.json();
-      if (response.ok) {
-        setJobs(
-          jobs.map((job) =>
-            job.ID === id
-              ? { ...job, status: "completed", result: data.results }
-              : job
-          )
-        );
-      } else {
-        setError(data.error || "Job execution failed");
+    const response = await fetch(
+      `https://langley-webscarper.onrender.com/api/jobs/${id}/export`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
-    } catch (error) {
-      setError("Network error. Please try again.");
+    );
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `job_export_${id}.csv`;
+      a.click();
+    } else {
+      setError("Export failed");
     }
   };
 
@@ -75,6 +72,7 @@ const Dashboard = () => {
           <p className="text-red-500 text-center mb-4 font-poppins">{error}</p>
         )}
         <div className="mt-6">
+          <h3 className={`${styles.heading3}`}>Your Jobs</h3>
           {jobs.length === 0 ? (
             <p className="text-dimWhite text-center">
               No jobs yet. Create one!
@@ -100,12 +98,22 @@ const Dashboard = () => {
                       <strong>Result:</strong> {job.Result}
                     </p>
                   )}
-                  <button
-                    onClick={() => handleExecute(job.ID)}
-                    className="mt-2 bg-blue-gradient py-2 px-4 rounded-lg text-white font-poppins font-medium hover:opacity-90 transition duration-200"
-                  >
-                    Execute
-                  </button>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => handleExecute(job.ID)}
+                      className="bg-blue-gradient py-2 px-4 rounded-lg text-white font-poppins font-medium hover:opacity-90 transition duration-200"
+                    >
+                      Execute
+                    </button>
+                    {job.Status === "completed" && (
+                      <button
+                        onClick={() => handleExport(job.ID)}
+                        className="bg-green-gradient py-2 px-4 rounded-lg text-white font-poppins font-medium hover:opacity-90 transition duration-200"
+                      >
+                        Export
+                      </button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

@@ -7,5 +7,6 @@ type Job struct {
 	Selector  string `gorm:"not null"` // CSS selector for scraping
 	Status    string `gorm:"default:'pending'"`
 	Result    string // Store scraped data as JSON
+	Schedule  string `gorm:"default:''"`
 	CreatedAt int64  `gorm:"autoCreateTime"`
 }
