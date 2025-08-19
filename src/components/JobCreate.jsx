@@ -11,8 +11,13 @@ const JobCreate = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
+    console.log("Token:", token); // Add this to debug
+    if (!token) {
+      setError("No token found. Please log in again.");
+      return;
+    }
     const response = await fetch(
-      "https://langley-webscarper.onrender.com/api/jobs", // ✅ update with backend URL
+      "https://langley-webscarper.onrender.com/api/jobs",
       {
         method: "POST",
         headers: {
@@ -28,6 +33,7 @@ const JobCreate = () => {
     } else {
       const data = await response.json();
       setError(data.error || "Job creation failed");
+      console.log("Error Response:", data);
     }
   };
 

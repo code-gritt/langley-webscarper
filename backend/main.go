@@ -39,6 +39,12 @@ func authMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+
+		// ✅ Strip "Bearer " if present
+		if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
+			tokenString = tokenString[7:]
+		}
+
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			return jwtKey, nil
 		})
@@ -47,12 +53,14 @@ func authMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
 			c.Abort()
 			return
 		}
+
 		c.Set("email", claims["email"])
 		c.Next()
 	}
